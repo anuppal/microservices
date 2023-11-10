@@ -7,79 +7,48 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Simulated user data (in-memory storage for simplicity)
-# users = []
-
-class Task(db.Model):
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), nullable=False)
-    password = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(100), nullable=False)
+    username = db.Column(db.String(50), unique=True, nullable=False)
+    password = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=False)
 
-
-# @app.route('/tasks', methods=['POST'])
-# def create_task():
-#     data = request.get_json()
-
-#     if 'title' not in data:
-#         return jsonify({'error': 'Title is required'}), 400
-
-#     title = data['title']
-#     new_task = Task(title=title)
-
-#     db.session.add(new_task)
-#     db.session.commit()
-
-#     return jsonify({'message': 'Task created successfully'}), 201
-
-
-# User model (should be stored in a database in a real-world scenario)
-class User:
-    def __init__(self, username, password, email):
-        self.username = username
-        self.password = password
-        self.email = email
-
-# Route for user registration
-@app.route('/register', methods=['POST'])
-def register():
+@app.route('/create_user', methods=['POST'])
+def create_user():
     data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
-    email = data.get('email')
 
-    if not username or not password or not email:
+    if 'username' not in data or 'password' not in data or 'email' not in data:
         return jsonify({'error': 'Username, password, and email are required'}), 400
 
-    if any(user.username == username for user in users):
-        return jsonify({'error': 'Username already exists'}), 400
+    new_user = User(username=data['username'], password=data['password'], email=data['email'])
 
-    new_user = User(username, password, email)
-    # users.append(new_user)
-    Task.append(new_user)
-
-    db.session.add(username,password,email)
+    db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({'message': 'User registered successfully'}), 201
+    return jsonify({'message': 'User created successfully'}), 201
 
-# Route for user login (simple password-based authentication)
-@app.route('/login', methods=['POST'])
-def login():
+@app.route('/update_user/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    user = User.query.get(user_id)
+
+    if user is None:
+        return jsonify({'error': 'User not found'}), 404
+
     data = request.get_json()
-    username = data.get('username')
-    password = data.get('password')
 
-    user = next((user for user in users if user.username == username), None)
+    if 'username' in data:
+        user.username = data['username']
+    if 'password' in data:
+        user.password = data['password']
+    if 'email' in data:
+        user.email = data['email']
 
-    if user and user.password == password:
-        return jsonify({'message': 'Login successful'}), 200
-    else:
-        return jsonify({'error': 'Invalid username or password'}), 401
-    
-    db.session.add(username,password)
     db.session.commit()
+
+    return jsonify({'message': 'User updated successfully'}), 200
 
 if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    
     app.run(debug=True)
-    # db.create_all()
